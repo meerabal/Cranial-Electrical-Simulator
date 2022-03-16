@@ -494,8 +494,8 @@
    <widget class="QSlider" name="verticalSlider">
     <property name="geometry">
      <rect>
-      <x>400</x>
-      <y>270</y>
+      <x>350</x>
+      <y>280</y>
       <width>16</width>
       <height>171</height>
      </rect>
