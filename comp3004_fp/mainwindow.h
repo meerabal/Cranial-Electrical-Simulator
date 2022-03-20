@@ -5,6 +5,9 @@
 #include <QListWidget>
 #include <QProgressBar>
 #include <QSlider>
+#include <QtGlobal>
+#include <QDateTime>
+#include <QtCore>
 #include "Record.h"
 
 QT_BEGIN_NAMESPACE
@@ -33,17 +36,22 @@ private:
     QSlider *slider;
     QListWidget *timeWidget;
     QListWidget *sessionTypeWidget;
+    QElapsedTimer time;
+    QTimer timer;
     bool powerOn;
     int connection;
     float batteryLevel;       // display is ceil(), drain per sec is 0.2 at intensity 1, max 0.2*8 = 1.6 drain per sec for intensity 8
     int selectCounter;
+    quint64 pressedTime;
 
 private slots:
     // slots handling the input
     void handlePowerButton();
+    void handlePowerPressed();
     void handleUpButton();
     void handleDownButton();
     void handleSelectButton();
     void handleSlider();
+    void updateTimeLabel();
 };
 #endif // MAINWINDOW_H

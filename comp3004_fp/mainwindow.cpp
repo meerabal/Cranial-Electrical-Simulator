@@ -15,13 +15,18 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->setupUi(this);
     ui->powerButton->setText(powerOn? "Off" : "On");
+
     ///ui->displayBar->setValue(connection);
     ui->batteryLevelBar->setValue(batteryLevel);
     connect(ui->powerButton, SIGNAL(released()), this, SLOT(handlePowerButton()));
+    connect(ui->powerButton, SIGNAL(pressed()), this, SLOT(handlePowerPressed()));
     connect(ui->upButton, SIGNAL(released()), this, SLOT(handleUpButton()));
     connect(ui->downButton, SIGNAL(released()), this, SLOT(handleDownButton()));
     connect(ui->selectButton, SIGNAL(released()), this, SLOT(handleSelectButton()));
     connect(ui->connectionSlider, SIGNAL(sliderReleased()),this, SLOT(handleSlider()));
+
+    connect(&timer, SIGNAL(timeout()), this, SLOT (updateTimeLabel()));
+
 
     progressBar = ui->displayBar;
 
@@ -58,33 +63,40 @@ void MainWindow::setButtonState(){
     slider->setValue(0);
 
 }
+void MainWindow::handlePowerPressed(){
+    pressedTime = QDateTime::currentSecsSinceEpoch();
+}
 
 void MainWindow::handlePowerButton() {
-    powerOn = !powerOn;
-    ui->powerButton->setText(powerOn? "Off" : "On");
-    setButtonState();
+    quint64 releasedTime = QDateTime::currentSecsSinceEpoch();
+    if((releasedTime-pressedTime)>1){
+        powerOn = !powerOn;
+        ui->powerButton->setText(powerOn? "Off" : "On");
+        setButtonState();
+        selectCounter = powerOn? 1 : 0;
+        timeWidget->setCurrentRow(0);
+        //timeWidget->setEnabled(powerOn);
+        //timeWidget->setSelectionMode(QAbstractItemView::NoSelection);
+       // sess
+    }
+    else if(powerOn){
+        int newIndex = timeWidget->currentRow() + 1;
 
-    selectCounter = powerOn? 1 : 0;
+        if (newIndex >= timeWidget->count()) {
+            newIndex = 0;
+        }
 
+        timeWidget->setCurrentRow(newIndex);
 
-
+    }
 
     qInfo("Power button pressed");
 }
 
 void MainWindow::handleUpButton() {
     //switch slect counter
+
     if(selectCounter == 1){
-        int newIndex = timeWidget->currentRow() - 1;
-
-        if (newIndex < 0) {
-            newIndex = timeWidget->count() - 1;
-        }
-
-        timeWidget->setCurrentRow(newIndex);
-
-    }
-    else if (selectCounter == 3){
         int newIndex = sessionTypeWidget->currentRow() - 1;
 
         if (newIndex < 0) {
@@ -92,10 +104,11 @@ void MainWindow::handleUpButton() {
         }
 
         sessionTypeWidget->setCurrentRow(newIndex);
-
     }
 
-    else if (selectCounter == 4){
+
+
+    else if (selectCounter >= 2){
         int newIndex = progressBar->value() + 1;
 
         if (newIndex > progressBar->maximum()) {
@@ -109,23 +122,11 @@ void MainWindow::handleUpButton() {
     qInfo("Up button pressed");
 
 
-
-
 }
 
 void MainWindow::handleDownButton() {
        //switch slect counter
     if(selectCounter == 1){
-        int newIndex = timeWidget->currentRow() + 1;
-
-        if (newIndex >= timeWidget->count()) {
-            newIndex = 0;
-        }
-
-        timeWidget->setCurrentRow(newIndex);
-
-    }
-    else if(selectCounter == 3 ){
         int newIndex = sessionTypeWidget->currentRow() + 1;
 
         if (newIndex >= sessionTypeWidget->count()) {
@@ -134,9 +135,9 @@ void MainWindow::handleDownButton() {
 
         sessionTypeWidget->setCurrentRow(newIndex);
 
-    }
 
-    else if(selectCounter==4){
+    }
+    else if(selectCounter >= 2){
         int newIndex = progressBar->value() - 1;
 
         if (newIndex < 0) {
@@ -148,29 +149,42 @@ void MainWindow::handleDownButton() {
 
     }
 
-    //add condition for changing time duration for custom
-
     qInfo("Down button pressed");
 }
 
 //need to increment selectCounter
+void MainWindow::updateTimeLabel(){
+
+    int s = time.elapsed()/1000;
+    //int m = (s/60) % 60;
+    //s = s % 60;
+    QString timeString =QString::number(s/60) + ((s%60 < 10) ? + ":0" + QString::number(s%60) : + ":" + QString::number(s%60));
+
+   // ui->timeElapsedLabel->setText((QDateTime::fromTime_t(s).toUTC().toString("hh:mm:ss")));
+    //ui->timeElapsedLabel->setText(QString("Time elapsed %01:%02").arg(m).arg(s));
+    ui->timeElapsedLabel->setText(timeString);
+
+
+}
 void MainWindow::handleSelectButton() {
 
-    if(selectCounter == 1 && timeWidget->currentRow()!= 2){
-        //int currSelection = timeWidget->currentRow();
-        //store index and value'
-        selectCounter++;
+    selectCounter++;
+    timer.start(1000);
+    time.start();
+    updateTimeLabel();
+
+    if(selectCounter>=2 && timeWidget->currentRow()==2){
+        customDuration();
     }
-    selectCounter++;`
-
-
     qInfo("Select button pressed");
+
 
 }
 
 
 
 void MainWindow::customDuration(){
+
 
 
 
