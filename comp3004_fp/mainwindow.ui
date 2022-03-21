@@ -453,12 +453,12 @@
      </property>
     </item>
    </widget>
-   <widget class="QLabel" name="customTimeLabel">
+   <widget class="QLabel" name="timeElapsedLabel">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>190</y>
-      <width>61</width>
+      <x>180</x>
+      <y>20</y>
+      <width>161</width>
       <height>20</height>
      </rect>
     </property>
@@ -466,16 +466,13 @@
      <string notr="true"/>
     </property>
     <property name="text">
-     <string>time = </string>
+     <string>time elapsed: </string>
     </property>
     <property name="textFormat">
      <enum>Qt::AutoText</enum>
     </property>
     <property name="scaledContents">
      <bool>false</bool>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignCenter</set>
     </property>
    </widget>
    <widget class="QProgressBar" name="batteryLevelBar">
@@ -491,7 +488,7 @@
      <number>100</number>
     </property>
    </widget>
-   <widget class="QSlider" name="verticalSlider">
+   <widget class="QSlider" name="connectionSlider">
     <property name="geometry">
      <rect>
       <x>400</x>
