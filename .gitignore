@@ -1,3 +1,8 @@
 # ignore QT debug folder
 build-comp3004_fp-Desktop-Debug/
 
+# ignore .user file
+code/comp3004_fp.pro.user
+
+# ignore autosaves
+code/*.autosave
