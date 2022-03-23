@@ -6,7 +6,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow),
       powerOn(false),
       connection(8),
-      batteryLevel(96),
+      batteryLevel(15),
       selectCounter(0),
       record(NULL)
 
@@ -29,6 +29,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->connectionSlider, SIGNAL(sliderReleased()),this, SLOT(handleSlider()));
 
     connect(&timer, SIGNAL(timeout()), this, SLOT (updateTimeLabel()));
+    connect(&secondsTimer, SIGNAL(timeout()), this, SLOT (perSecondUpdate()));
+    connect(&sessionTimer, SIGNAL(timeout()), this, SLOT (sessionEnd()));
+    secondsTimer.start(1000);
 
     init();
 
@@ -50,6 +53,8 @@ void MainWindow::init() {
     // populate session list
     sessionList << "Beta" << "Delta" << "Omega";
     sessionTypeWidget->addItems(sessionList);
+
+    // do we need a list of previous dummy records?
 
     // set button state
     setButtonState();
@@ -81,7 +86,7 @@ void MainWindow::handlePowerPressed(){
 
 void MainWindow::handlePowerButton() {
     quint64 releasedTime = QDateTime::currentSecsSinceEpoch();
-    if((releasedTime-pressedTime)>0.5){
+    if((releasedTime-pressedTime)>0.75){
         // if battery is too low to start device
         if(!powerOn && batteryLevel == 0) {
             return;
@@ -189,11 +194,15 @@ void MainWindow::handleSelectButton() {
     selectCounter++;
     timer.start(1000);
     time.start();
+    int timeToSet = durationList[timeWidget->currentRow()];
+    timeToSet = timeToSet? timeToSet : 60*60;       // 60*60 is an arbitrary max value
+    sessionTimer.start((timeToSet+1) * 1000);
     updateTimeLabel();
 
     QString sessionName = sessionList[sessionTypeWidget->currentRow()];
     Session *s = new Session(sessionName);
     record->setSession(s);
+
     record->setDuration(durationList[timeWidget->currentRow()]);
 
     progressBar->setValue(record->getIntensity());
@@ -211,15 +220,43 @@ void MainWindow::handleSelectButton() {
 
 void MainWindow::customDuration(){
 
-
-
-
 }
 
 void MainWindow:: handleSlider(){
 
 }
 
+void MainWindow::perSecondUpdate() {
+    // if session is on:
+    // update battery level
+    // update session timer
+    if(selectCounter >= 2) {
+        // int s = sessionTimer.remainingTime() /1000;  // counts down
+        int s = (sessionTimer.interval() - sessionTimer.remainingTime()) /1000;     // counts up
+        QString timeString = QString::number(s/60) + ((s%60 < 10) ? + ":0" + QString::number(s%60) : + ":" + QString::number(s%60));
+        ui->rightLightLabel->setText(timeString);
 
+        // display is ceil(), drain per sec is 0.2 at intensity 1, max 0.2*8 = 1.6 drain per sec for intensity 8
+        batteryLevel = batteryLevel - (0.1 * (record->getIntensity() + 0.1));
+        batteryLevel = batteryLevel < 0? 0 : batteryLevel;
+        int displayBattery = ceil(batteryLevel);
+        ui->batteryLevelBar->setValue(displayBattery);
 
+        if(batteryLevel == 0) {
+            handlePowerButton();    // temporary fix for now
+            // should use the sessionEnd function to gracefully end session
+        }
+    }
+}
+
+// called when sessionTimer runs out
+// can also be called when device powers off mid session
+void MainWindow::sessionEnd() {
+    sessionTimer.stop();
+    selectCounter = 1;
+    // perform soft off
+    // change selectCounter
+    // if !powerOn -- move clearing record information from handlePowerButton to here
+    // give option to add session to record
+}
 

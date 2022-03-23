@@ -27,21 +27,25 @@ public:
 private:
     Ui::MainWindow *ui;
     Record* record;
-    QList<int> durationList;     //QList<int>
+    QList<int> durationList;
     QStringList sessionList;
-    //QVector<int> durationList;
-    QVector<int> intensityList;
-    QVector<Record*> recordList;
+    QList<Record*> recordList;
     QProgressBar *progressBar;
     QSlider *slider;
     QListWidget *timeWidget;
     QListWidget *sessionTypeWidget;
-    QElapsedTimer time;
-    QTimer timer;
+    QElapsedTimer time;     // rm
+    QTimer timer;           // rm
+    QTimer secondsTimer;
+    QTimer sessionTimer;
+    // might need a timer for powerButton as well - current one seems to be bugging on repeating clicks fast
     bool powerOn;
     int connection;
     float batteryLevel;       // display is ceil(), drain per sec is 0.2 at intensity 1, max 0.2*8 = 1.6 drain per sec for intensity 8
     int selectCounter;        // determines whether progress bar shows connection or intensity
+    // selectCounter == 1 -- on selection state
+    // selectCounter == 2 -- on session running state (this should be connection test state)
+    // selectCounter == 3 -- (should be session running state)
     quint64 pressedTime;
     void init();
 
@@ -54,5 +58,7 @@ private slots:
     void handleSelectButton();
     void handleSlider();
     void updateTimeLabel();
+    void perSecondUpdate();
+    void sessionEnd();
 };
 #endif // MAINWINDOW_H
