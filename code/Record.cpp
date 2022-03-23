@@ -13,7 +13,9 @@ Record::Record(int dur, int i, Session *s)
 
 // dtor
 Record::~Record()
-{ }
+{
+    delete session;
+}
 
 int Record::getDuration() {
     return duration;

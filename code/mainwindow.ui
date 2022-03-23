@@ -412,21 +412,6 @@
       <height>81</height>
      </rect>
     </property>
-    <item>
-     <property name="text">
-      <string>20min</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>45min</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>user defined</string>
-     </property>
-    </item>
    </widget>
    <widget class="QListWidget" name="sessionTypeWidget">
     <property name="geometry">
@@ -437,21 +422,6 @@
       <height>81</height>
      </rect>
     </property>
-    <item>
-     <property name="text">
-      <string>beta</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>delta</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>omega</string>
-     </property>
-    </item>
    </widget>
    <widget class="QLabel" name="timeElapsedLabel">
     <property name="geometry">

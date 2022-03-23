@@ -26,8 +26,8 @@ public:
 
 private:
     Ui::MainWindow *ui;
-    Record* session;
-    QStringList durationList;
+    Record* record;
+    QList<int> durationList;     //QList<int>
     QStringList sessionList;
     //QVector<int> durationList;
     QVector<int> intensityList;
@@ -41,8 +41,9 @@ private:
     bool powerOn;
     int connection;
     float batteryLevel;       // display is ceil(), drain per sec is 0.2 at intensity 1, max 0.2*8 = 1.6 drain per sec for intensity 8
-    int selectCounter;
+    int selectCounter;        // determines whether progress bar shows connection or intensity
     quint64 pressedTime;
+    void init();
 
 private slots:
     // slots handling the input

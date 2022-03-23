@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.11.0, 2022-03-16T21:29:08. -->
+<!-- Written by QtCreator 4.11.0, 2022-03-20T23:56:46. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -282,9 +282,8 @@
     </valuelist>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">comp3004_fp2</value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.Qt4RunConfiguration:/home/student/FP/Cranial-Electrical-Simulator/comp3004_fp/comp3004_fp.pro</value>
-    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/student/FP/Cranial-Electrical-Simulator/comp3004_fp/comp3004_fp.pro</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.Qt4RunConfiguration:/home/student/fp/Cranial-Electrical-Simulator/code/comp3004_fp.pro</value>
+    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">/home/student/fp/Cranial-Electrical-Simulator/code/comp3004_fp.pro</value>
     <value type="QString" key="RunConfiguration.Arguments"></value>
     <value type="bool" key="RunConfiguration.Arguments.multi">false</value>
     <value type="QString" key="RunConfiguration.OverrideDebuggerStartup"></value>
