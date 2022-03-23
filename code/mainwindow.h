@@ -31,7 +31,7 @@ private:
     QStringList sessionList;
     QList<Record*> recordList;
     QProgressBar *progressBar;
-    QSlider *slider;
+    QAbstractSlider *slider;
     QListWidget *timeWidget;
     QListWidget *sessionTypeWidget;
     QElapsedTimer time;     // rm
@@ -56,6 +56,7 @@ private slots:
     void handleUpButton();
     void handleDownButton();
     void handleSelectButton();
+    void handleRecordButton();
     void handleSlider();
     void updateTimeLabel();
     void perSecondUpdate();
