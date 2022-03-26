@@ -892,9 +892,9 @@
    <widget class="QLabel" name="timeElapsedLabel">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>240</x>
       <y>20</y>
-      <width>161</width>
+      <width>71</width>
       <height>20</height>
      </rect>
     </property>
@@ -907,7 +907,7 @@
      <string notr="true"/>
     </property>
     <property name="text">
-     <string>time elapsed: </string>
+     <string>0:00</string>
     </property>
     <property name="textFormat">
      <enum>Qt::AutoText</enum>
@@ -1134,9 +1134,9 @@
    <widget class="QGraphicsView" name="graphicsView">
     <property name="geometry">
      <rect>
-      <x>50</x>
+      <x>120</x>
       <y>50</y>
-      <width>661</width>
+      <width>571</width>
       <height>211</height>
      </rect>
     </property>
@@ -1379,6 +1379,59 @@
     </property>
     <property name="text">
      <string>Down</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="intLabel">
+    <property name="geometry">
+     <rect>
+      <x>483</x>
+      <y>300</y>
+      <width>71</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>INT</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="timeSpinBox">
+    <property name="geometry">
+     <rect>
+      <x>60</x>
+      <y>200</y>
+      <width>45</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="timerLabel">
+    <property name="geometry">
+     <rect>
+      <x>190</x>
+      <y>20</y>
+      <width>51</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>DejaVu Sans Mono</family>
+     </font>
+    </property>
+    <property name="styleSheet">
+     <string notr="true"/>
+    </property>
+    <property name="text">
+     <string>Timer: </string>
+    </property>
+    <property name="textFormat">
+     <enum>Qt::AutoText</enum>
+    </property>
+    <property name="scaledContents">
+     <bool>false</bool>
     </property>
    </widget>
   </widget>
