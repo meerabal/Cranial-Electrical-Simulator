@@ -3,22 +3,24 @@
 using namespace std;
 #include <string>
 #include <vector>
+#include "QString"
 
 // This is the header file for Session class
 class Session
 {
 public:
-    Session(string n="None", float f=0.5);      // default ctor
+    Session(QString n="None", float f=0.5);      // default ctor
     ~Session();                                 // dtor
 
-    string getName();
+    QString getName();
     float getFreq();
+    QString getSessionString();
 
-    void setName(string n);
+    void setName(QString n);
     void setFreq(float f);
 
 private:
-    string name;
+    QString name;
     float freq;
 
 };

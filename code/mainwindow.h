@@ -21,28 +21,32 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void customDuration();
-    void setButtonState();
 
 private:
     Ui::MainWindow *ui;
-    Record* session;
-    QStringList durationList;
+    Record* record;
+    QList<int> durationList;
     QStringList sessionList;
-    //QVector<int> durationList;
-    QVector<int> intensityList;
-    QVector<Record*> recordList;
+    QList<Record*> recordList;
     QProgressBar *progressBar;
-    QSlider *slider;
+    QAbstractSlider *slider;
     QListWidget *timeWidget;
     QListWidget *sessionTypeWidget;
-    QElapsedTimer time;
-    QTimer timer;
+    int pausedTime;
+    QTimer secondsTimer;
+    QTimer sessionTimer;
     bool powerOn;
-    int connection;
-    float batteryLevel;       // display is ceil(), drain per sec is 0.2 at intensity 1, max 0.2*8 = 1.6 drain per sec for intensity 8
-    int selectCounter;
+    int connection;           // unused yet
+    float batteryLevel;
+    int selectCounter;        // determines whether progress bar shows connection or intensity
+    // selectCounter == 0 -- device is off
+    // selectCounter == 1 -- on selection state
+    // selectCounter == 2 -- on session running state (this should be connection test state)
+    // selectCounter == 3 -- (should be session running state)
     quint64 pressedTime;
+    void init();
+    void setUIState();
+    void updateTimeLabel();
 
 private slots:
     // slots handling the input
@@ -51,7 +55,9 @@ private slots:
     void handleUpButton();
     void handleDownButton();
     void handleSelectButton();
+    void handleRecordButton();
     void handleSlider();
-    void updateTimeLabel();
+    void perSecondUpdate();
+    void sessionEnd();
 };
 #endif // MAINWINDOW_H

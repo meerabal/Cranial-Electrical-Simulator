@@ -6,62 +6,106 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow),
       powerOn(false),
       connection(8),
-      batteryLevel(96),
-      selectCounter(0),
-      session(new Record())
+      record(NULL),
+      pausedTime(0),
+      batteryLevel(15),
+      selectCounter(0)
 
 {
 
-
     ui->setupUi(this);
-    ui->powerButton->setText(powerOn? "Off" : "On");
+    progressBar = ui->displayBar;
+    slider= ui->connectionSlider;
+    timeWidget = ui->timeWidget;
+    sessionTypeWidget = ui->sessionTypeWidget;
 
-    ///ui->displayBar->setValue(connection);
-    ui->batteryLevelBar->setValue(batteryLevel);
     connect(ui->powerButton, SIGNAL(released()), this, SLOT(handlePowerButton()));
     connect(ui->powerButton, SIGNAL(pressed()), this, SLOT(handlePowerPressed()));
     connect(ui->upButton, SIGNAL(released()), this, SLOT(handleUpButton()));
     connect(ui->downButton, SIGNAL(released()), this, SLOT(handleDownButton()));
     connect(ui->selectButton, SIGNAL(released()), this, SLOT(handleSelectButton()));
-    connect(ui->connectionSlider, SIGNAL(sliderReleased()),this, SLOT(handleSlider()));
+    connect(ui->recordButton, SIGNAL(released()), this, SLOT(handleRecordButton()));
+    connect(ui->connectionSlider, SIGNAL(valueChanged(int)),this, SLOT(handleSlider()));
 
-    connect(&timer, SIGNAL(timeout()), this, SLOT (updateTimeLabel()));
+    connect(&secondsTimer, SIGNAL(timeout()), this, SLOT (perSecondUpdate()));
+    connect(&sessionTimer, SIGNAL(timeout()), this, SLOT (sessionEnd()));
+    secondsTimer.start(1000);
 
+    init();
 
-    progressBar = ui->displayBar;
+}
 
-    slider= ui->connectionSlider;
+void MainWindow::init() {
+    ui->batteryLevelBar->setValue(batteryLevel);
+    ui->recordButton->setEnabled(false);
+    ui->powerButton->setText(powerOn? "Off" : "On");
+    ui->timeSpinBox->setVisible(false);
 
-    setButtonState();
+    // populate duration list
+    durationList << 20 << 45 << 0;
+    for(int time : durationList) {
+        QString timeStr = QString::number(time) + " min";
+        if(time == 0) {
+            timeStr = "User Defined";
+        }
+        timeWidget->addItem(timeStr);
+    }
 
-
-    //Qlist widget's addItems takes only QStringList, i dont think it takes Qvector.
-    timeWidget = ui->timeWidget;
-    timeWidget->addItems(durationList);
-    timeWidget->setCurrentRow(0);
-
-    sessionTypeWidget = ui->sessionTypeWidget;
+    // populate session list
+    sessionList << "Delta" << "Theta" << "Alpha" << "Beta";
     sessionTypeWidget->addItems(sessionList);
-    sessionTypeWidget->setCurrentRow(0);
 
+    // do we need a list of previous dummy records?
+    Session *s1 = new Session("Delta", 5);
+    Session *s2 = new Session("Beta", 8);
+    recordList.append(new Record(45, 5, s1));
+    recordList.append(new Record());    // can handle null sessions as well
+    recordList.append(new Record(20, 2, s2));
+    recordList.append(new Record());
 
+    for(Record *r : recordList) {
+        ui->historyWidget->addItem(r->getRecordString());
+    }
 
-
+    // set button state
+    setUIState();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+    // record should not delete if it is stored in history
+    delete record;
+    for(Record *r : recordList) {
+        if(r != NULL) {
+            delete r;
+        }
+    }
+
 }
 
-void MainWindow::setButtonState(){
+void MainWindow::setUIState(){
     ui->upButton->setEnabled(powerOn);
     ui->downButton->setEnabled(powerOn);
     ui->selectButton->setEnabled(powerOn);
+    ui->timeWidget->setEnabled(powerOn);
+    ui->sessionTypeWidget->setEnabled(powerOn);
+    ui->powerButton->setText(powerOn? "Off" : "On");
+    timeWidget->setCurrentRow(0);
+    sessionTypeWidget->setCurrentRow(0);
 
     slider->setEnabled(powerOn);
     slider->setValue(0);
-
+    progressBar->setValue(1);
+    handleSlider();
+    if(!powerOn) {
+        ui->historyWidget->clear();
+    }
+    else {
+        for(Record *r : recordList) {
+            ui->historyWidget->addItem(r->getRecordString());
+        }
+    }
 }
 void MainWindow::handlePowerPressed(){
     pressedTime = QDateTime::currentSecsSinceEpoch();
@@ -70,16 +114,23 @@ void MainWindow::handlePowerPressed(){
 void MainWindow::handlePowerButton() {
     quint64 releasedTime = QDateTime::currentSecsSinceEpoch();
     if((releasedTime-pressedTime)>1){
+        // if battery is too low to start device
+        if(!powerOn && batteryLevel == 0) {
+            return;
+        }
         powerOn = !powerOn;
-        ui->powerButton->setText(powerOn? "Off" : "On");
-        setButtonState();
+        setUIState();
         selectCounter = powerOn? 1 : 0;
-        timeWidget->setCurrentRow(0);
-        //timeWidget->setEnabled(powerOn);
-        //timeWidget->setSelectionMode(QAbstractItemView::NoSelection);
-       // sess
+        if(powerOn) {
+            record = new Record();
+        }
+        else {
+            delete record;
+            record = NULL;
+        }
     }
-    else if(powerOn){
+    // select time duration
+    else if(powerOn && selectCounter == 1){
         int newIndex = timeWidget->currentRow() + 1;
 
         if (newIndex >= timeWidget->count()) {
@@ -87,15 +138,19 @@ void MainWindow::handlePowerButton() {
         }
 
         timeWidget->setCurrentRow(newIndex);
-
+        if(timeWidget->currentRow() == 2) {
+            ui->timeSpinBox->setVisible(true);
+        }
+        else {
+            ui->timeSpinBox->setVisible(false);
+        }
     }
 
     qInfo("Power button pressed");
 }
 
 void MainWindow::handleUpButton() {
-    //switch slect counter
-
+    // session type
     if(selectCounter == 1){
         int newIndex = sessionTypeWidget->currentRow() - 1;
 
@@ -106,8 +161,7 @@ void MainWindow::handleUpButton() {
         sessionTypeWidget->setCurrentRow(newIndex);
     }
 
-
-
+    // intensity
     else if (selectCounter >= 2){
         int newIndex = progressBar->value() + 1;
 
@@ -116,7 +170,8 @@ void MainWindow::handleUpButton() {
         }
 
         progressBar->setValue(newIndex);
-
+        record->incrementIntensity();
+        qDebug() << "intensity " << record->getIntensity();
     }
 
     qInfo("Up button pressed");
@@ -125,75 +180,133 @@ void MainWindow::handleUpButton() {
 }
 
 void MainWindow::handleDownButton() {
-       //switch slect counter
+    // session type
     if(selectCounter == 1){
         int newIndex = sessionTypeWidget->currentRow() + 1;
 
         if (newIndex >= sessionTypeWidget->count()) {
             newIndex = 0;
         }
-
         sessionTypeWidget->setCurrentRow(newIndex);
-
-
     }
+
+    // intensity
     else if(selectCounter >= 2){
         int newIndex = progressBar->value() - 1;
 
-        if (newIndex < 0) {
-            newIndex = 0;
+        if (newIndex < 1) {
+            newIndex = 1;
         }
 
         progressBar->setValue(newIndex);
-
+        record->decrementIntensity();
+        qDebug() << "intensity " << record->getIntensity();
 
     }
 
     qInfo("Down button pressed");
 }
 
-//need to increment selectCounter
 void MainWindow::updateTimeLabel(){
-
-    int s = time.elapsed()/1000;
-    //int m = (s/60) % 60;
-    //s = s % 60;
-    QString timeString =QString::number(s/60) + ((s%60 < 10) ? + ":0" + QString::number(s%60) : + ":" + QString::number(s%60));
-
-   // ui->timeElapsedLabel->setText((QDateTime::fromTime_t(s).toUTC().toString("hh:mm:ss")));
-    //ui->timeElapsedLabel->setText(QString("Time elapsed %01:%02").arg(m).arg(s));
+     int s = sessionTimer.remainingTime() / 1000;  // counts down
+//    int s = (sessionTimer.interval() - sessionTimer.remainingTime()) / 1000;     // counts up
+    QString timeString = QString::number(s/60) + ((s%60 < 10) ? + ":0" + QString::number(s%60) : + ":" + QString::number(s%60));
     ui->timeElapsedLabel->setText(timeString);
-
-
 }
-void MainWindow::handleSelectButton() {
 
+void MainWindow::handleSelectButton() {
     selectCounter++;
-    timer.start(1000);
-    time.start();
+    int timeToSet = durationList[timeWidget->currentRow()];
+//    timeToSet = timeToSet? timeToSet : 60*60;       // 60*60 is an arbitrary max value
+    if(timeWidget->currentRow() == 2) {
+        timeToSet = ui->timeSpinBox->value();
+    }
+    sessionTimer.start((timeToSet) * 1000);
     updateTimeLabel();
 
-    if(selectCounter>=2 && timeWidget->currentRow()==2){
-        customDuration();
-    }
+    QString sessionName = sessionList[sessionTypeWidget->currentRow()];
+    Session *s = new Session(sessionName);
+    record->setSession(s);
+
+    record->setDuration(durationList[timeWidget->currentRow()]);
+
+    progressBar->setValue(record->getIntensity()+1);
+
     qInfo("Select button pressed");
+}
 
+void MainWindow::handleRecordButton(){
 
 }
 
+void MainWindow::handleSlider(){
+    qDebug() << "slider value:" << slider->value();
 
+    QString style = "";
+    switch(slider->value()) {
+        case 0:
+            ui->selectButton->setEnabled(powerOn);
+            style = "QLabel { background-color: green; color: white; }";
+            break;
+        case 1:
+            ui->selectButton->setEnabled(powerOn);
+            style = "QLabel { background-color: yellow; color: black; }";
+            break;
+        case 2:
+            ui->selectButton->setEnabled(false);
+            style = "QLabel { background-color: red; color: white; }";
+            break;
 
-void MainWindow::customDuration(){
+    }
+    if(!powerOn) {
+        style = "QLabel { background-color: transparent; color: black; }";
+    }
+    ui->leftLightLabel->setStyleSheet(style);
+    ui->rightLightLabel->setStyleSheet(style);
 
-
-
+    if(selectCounter == 2) {
+        if(slider->value()==2 && pausedTime == 0) {
+            // disconnect it
+            // pause timer
+            pausedTime = sessionTimer.remainingTime();
+            qDebug() << "pausedTime:" << pausedTime;
+            sessionTimer.stop();
+        }
+        else if(slider->value()!=2 && pausedTime > 0) {
+            sessionTimer.start(pausedTime+1);
+            qDebug() << "resumed pausedTime:" << pausedTime;
+            pausedTime = 0;
+        }
+    }
 
 }
 
-void MainWindow:: handleSlider(){
+void MainWindow::perSecondUpdate() {
+    // if session is on:
+    // update battery level
+    // update session timer
+    if(selectCounter >= 2 && slider->value() <= 1) {
+        updateTimeLabel();
+        batteryLevel = batteryLevel - (0.1 * (record->getIntensity() + 0.5));
+        batteryLevel = batteryLevel < 0? 0 : batteryLevel;
+        int displayBattery = ceil(batteryLevel);
+        ui->batteryLevelBar->setValue(displayBattery);
 
+        if(batteryLevel == 0) {
+            handlePowerButton();    // temporary fix for now
+            // should use the sessionEnd function to gracefully end session
+        }
+    }
 }
 
-
-
+// called when sessionTimer runs out
+// can also be called when device powers off mid session
+void MainWindow::sessionEnd() {
+    sessionTimer.stop();
+    selectCounter = 1;
+    // perform soft off
+    // change selectCounter
+    // if !powerOn -- move clearing record information from handlePowerButton to here
+    // give option to add session to record
+}
 

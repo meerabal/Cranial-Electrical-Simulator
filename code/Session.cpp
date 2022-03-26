@@ -5,7 +5,7 @@ using namespace std;
 #include "Session.h"
 
 // ctor
-Session::Session(string n, float f)
+Session::Session(QString n, float f)
     : name(n),
       freq(f)
 { }
@@ -14,7 +14,7 @@ Session::Session(string n, float f)
 Session::~Session()
 { }
 
-string Session::getName() {
+QString Session::getName() {
     return name;
 }
 
@@ -22,7 +22,13 @@ float Session::getFreq() {
     return freq;
 }
 
-void Session::setName(string n) {
+QString Session::getSessionString() {
+    QString str = "Session name: " + name + ",\n"
+            + "Frequency: " + QString::number(freq) + ",\n";
+    return str;
+}
+
+void Session::setName(QString n) {
     name = n;
 }
 

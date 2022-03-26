@@ -13,9 +13,13 @@ public:
     Record(int dur=0, int i=0, Session *s=NULL);   // default ctor
     ~Record();                                         // dtor
 
+    void incrementIntensity();
+    void decrementIntensity();
+
     int getDuration();
     int getIntensity();
     Session* getSession();
+    QString getRecordString();
 
     void setDuration(int dur);
     void setIntensity(int i);
@@ -23,7 +27,7 @@ public:
 
 private:
     int duration;
-    int intensity;
+    int intensity;          // 0 to 7
     Session *session;
 
 };
