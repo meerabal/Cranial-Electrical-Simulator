@@ -22,6 +22,12 @@ float Session::getFreq() {
     return freq;
 }
 
+QString Session::getSessionString() {
+    QString str = "Session name: " + name + ",\n"
+            + "Frequency: " + QString::number(freq) + ",\n";
+    return str;
+}
+
 void Session::setName(QString n) {
     name = n;
 }

@@ -408,16 +408,6 @@
       <bold>false</bold>
      </font>
     </property>
-    <item>
-     <property name="text">
-      <string>sessionType, duration, intensity</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>sessionType, duration, intensity (2)</string>
-     </property>
-    </item>
    </widget>
    <widget class="QProgressBar" name="displayBar">
     <property name="geometry">
@@ -508,8 +498,7 @@
      </font>
     </property>
     <property name="styleSheet">
-     <string notr="true">QLabel 
-{ background-color: red; }</string>
+     <string notr="true"/>
     </property>
     <property name="text">
      <string>L</string>

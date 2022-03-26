@@ -34,8 +34,7 @@ private:
     QAbstractSlider *slider;
     QListWidget *timeWidget;
     QListWidget *sessionTypeWidget;
-    QElapsedTimer time;     // rm
-    QTimer timer;           // rm
+    int pausedTime;
     QTimer secondsTimer;
     QTimer sessionTimer;
     // might need a timer for powerButton as well - current one seems to be bugging on repeating clicks fast

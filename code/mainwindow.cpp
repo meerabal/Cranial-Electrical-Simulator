@@ -8,7 +8,8 @@ MainWindow::MainWindow(QWidget *parent)
       connection(8),
       batteryLevel(15),
       selectCounter(0),
-      record(NULL)
+      record(NULL),
+      pausedTime(0)
 
 {
 
@@ -16,8 +17,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     //ui->displayBar->setValue(connection);
     ui->batteryLevelBar->setValue(batteryLevel);
-    QGraphicsScene *scene = new QGraphicsScene(this);
-    ui->graphicsView->setWindowOpacity(0.0);
+//    QGraphicsScene *scene = new QGraphicsScene(this);
+//    ui->graphicsView->setWindowOpacity(0.0);
     //ui->graphicsView->setVisible(true);
     progressBar = ui->displayBar;
     slider= ui->connectionSlider;
@@ -32,7 +33,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->recordButton, SIGNAL(released()), this, SLOT(handleRecordButton()));
     connect(ui->connectionSlider, SIGNAL(valueChanged(int)),this, SLOT(handleSlider()));
 
-    connect(&timer, SIGNAL(timeout()), this, SLOT (updateTimeLabel()));
     connect(&secondsTimer, SIGNAL(timeout()), this, SLOT (perSecondUpdate()));
     connect(&sessionTimer, SIGNAL(timeout()), this, SLOT (sessionEnd()));
     secondsTimer.start(1000);
@@ -59,6 +59,11 @@ void MainWindow::init() {
     sessionTypeWidget->addItems(sessionList);
 
     // do we need a list of previous dummy records?
+    Session *s1 = new Session("Delta");
+    Record *r1 = new Record(0, 0, s1);
+    Record *r2 = new Record();      // can handle null sessions as well
+    ui->historyWidget->addItem(r1->getRecordString());
+    ui->historyWidget->addItem(r2->getRecordString());
 
     // set button state
     setButtonState();
@@ -67,7 +72,14 @@ void MainWindow::init() {
 MainWindow::~MainWindow()
 {
     delete ui;
+    // record should not delete if it is stored in history
     delete record;
+    for(Record *r : recordList) {
+        if(r != NULL) {
+            delete r;
+        }
+    }
+
 }
 
 void MainWindow::setButtonState(){
@@ -147,8 +159,8 @@ void MainWindow::handleUpButton() {
         }
 
         progressBar->setValue(newIndex);
-        record->setIntensity(newIndex);
-
+        record->incrementIntensity();
+        qDebug() << "intensity " << record->getIntensity();
     }
 
     qInfo("Up button pressed");
@@ -172,12 +184,13 @@ void MainWindow::handleDownButton() {
     else if(selectCounter >= 2){
         int newIndex = progressBar->value() - 1;
 
-        if (newIndex < 0) {
-            newIndex = 0;
+        if (newIndex < 1) {
+            newIndex = 1;
         }
 
         progressBar->setValue(newIndex);
-        record->setIntensity(newIndex);
+        record->decrementIntensity();
+        qDebug() << "intensity " << record->getIntensity();
 
     }
 
@@ -186,21 +199,17 @@ void MainWindow::handleDownButton() {
 
 //need to increment selectCounter
 void MainWindow::updateTimeLabel(){
-
-    int s = time.elapsed()/1000;
+    // int s = sessionTimer.remainingTime() / 1000;  // counts down
+    int s = (sessionTimer.interval() - sessionTimer.remainingTime()) / 1000;     // counts up
     QString timeString = QString::number(s/60) + ((s%60 < 10) ? + ":0" + QString::number(s%60) : + ":" + QString::number(s%60));
-
     ui->timeElapsedLabel->setText(timeString);
-
-
 }
+
 void MainWindow::handleSelectButton() {
 
 
-    //if(slider->value()<=1){
+    //if(slider->value()<=1){       // to disable select button if connection is bad
     selectCounter++;
-    timer.start(1000);
-    time.start();
     int timeToSet = durationList[timeWidget->currentRow()];
     timeToSet = timeToSet? timeToSet : 60*60;       // 60*60 is an arbitrary max value
     sessionTimer.start((timeToSet+1) * 1000);
@@ -213,6 +222,7 @@ void MainWindow::handleSelectButton() {
     record->setDuration(durationList[timeWidget->currentRow()]);
 
     progressBar->setValue(record->getIntensity());
+    qDebug() << "progress bar value on select " << progressBar->value();
     //}
 
 //    if(selectCounter>=2 && timeWidget->currentRow()==2){
@@ -226,26 +236,31 @@ void MainWindow::handleSelectButton() {
 
 void MainWindow::handleRecordButton(){
 
-
 }
-
 
 
 void MainWindow::customDuration(){
 
 }
 
-void MainWindow:: handleSlider(){
+void MainWindow::handleSlider(){
     QString str = "sssslider value: ";
     qDebug()<<str<<slider->value();
 
     if(slider->value()==2){
          ui->selectButton->setEnabled(false);
-
+         ui->leftLightLabel->setStyleSheet("QLabel { background-color: red; color: white; }");
+         ui->rightLightLabel->setStyleSheet("QLabel { background-color: red; color: white; }");
     }
-    else{
+    else {
         ui->selectButton->setEnabled(true);
+        ui->leftLightLabel->setStyleSheet("QLabel { background-color: transparent; color: black; }");
+        ui->rightLightLabel->setStyleSheet("QLabel { background-color: transparent; color: black; }");
+    }
 
+    if(slider->value()!=2 && pausedTime > 0){
+        sessionTimer.start();
+        pausedTime = 0;
 
     }
 
@@ -256,13 +271,8 @@ void MainWindow::perSecondUpdate() {
     // update battery level
     // update session timer
     if(selectCounter >= 2 && slider->value()<=1) {
-        // int s = sessionTimer.remainingTime() /1000;  // counts down
-        int s = (sessionTimer.interval() - sessionTimer.remainingTime()) /1000;     // counts up
-        QString timeString = QString::number(s/60) + ((s%60 < 10) ? + ":0" + QString::number(s%60) : + ":" + QString::number(s%60));
-        ui->rightLightLabel->setText(timeString);
-
-        // display is ceil(), drain per sec is 0.2 at intensity 1, max 0.2*8 = 1.6 drain per sec for intensity 8
-        batteryLevel = batteryLevel - (0.1 * (record->getIntensity() + 0.1));
+        updateTimeLabel();
+        batteryLevel = batteryLevel - (0.1 * (record->getIntensity() + 0.5));
         batteryLevel = batteryLevel < 0? 0 : batteryLevel;
         int displayBattery = ceil(batteryLevel);
         ui->batteryLevelBar->setValue(displayBattery);
@@ -272,8 +282,11 @@ void MainWindow::perSecondUpdate() {
             // should use the sessionEnd function to gracefully end session
         }
     }
-    else if(slider->value()==2){
-
+    else if(slider->value()==2 && pausedTime == 0){
+        // disconnect it
+        // pause timer
+        pausedTime = sessionTimer.remainingTime();
+        sessionTimer.stop();
     }
 }
 

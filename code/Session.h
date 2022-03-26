@@ -14,6 +14,7 @@ public:
 
     QString getName();
     float getFreq();
+    QString getSessionString();
 
     void setName(QString n);
     void setFreq(float f);
