@@ -8,6 +8,8 @@
 #include <QtGlobal>
 #include <QDateTime>
 #include <QtCore>
+#include <stdlib.h>
+#include <unistd.h>
 #include "Record.h"
 
 QT_BEGIN_NAMESPACE
@@ -35,9 +37,12 @@ private:
     int pausedTime;
     QTimer secondsTimer;
     QTimer sessionTimer;
+    QTimer batteryTimer;
+    bool batteryFlag;
     bool powerOn;
     int connection;           // unused yet
     float batteryLevel;
+    float criticalLevel;
     int selectCounter;        // determines whether progress bar shows connection or intensity
     // selectCounter == 0 -- device is off
     // selectCounter == 1 -- on selection state
@@ -59,5 +64,6 @@ private slots:
     void handleSlider();
     void perSecondUpdate();
     void sessionEnd();
+    void criticalBatteryUpdate();
 };
 #endif // MAINWINDOW_H

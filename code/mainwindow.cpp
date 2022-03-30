@@ -9,7 +9,9 @@ MainWindow::MainWindow(QWidget *parent)
       record(NULL),
       pausedTime(0),
       batteryLevel(15),
-      selectCounter(0)
+      selectCounter(0),
+      criticalLevel(10),
+      batteryFlag(true)
 
 {
 
@@ -18,6 +20,9 @@ MainWindow::MainWindow(QWidget *parent)
     slider= ui->connectionSlider;
     timeWidget = ui->timeWidget;
     sessionTypeWidget = ui->sessionTypeWidget;
+    ui->batteryLevelBar->setVisible(false);
+
+
 
     connect(ui->powerButton, SIGNAL(released()), this, SLOT(handlePowerButton()));
     connect(ui->powerButton, SIGNAL(pressed()), this, SLOT(handlePowerPressed()));
@@ -29,7 +34,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(&secondsTimer, SIGNAL(timeout()), this, SLOT (perSecondUpdate()));
     connect(&sessionTimer, SIGNAL(timeout()), this, SLOT (sessionEnd()));
+    connect(&batteryTimer, SIGNAL(timeout()), this, SLOT (criticalBatteryUpdate()));
     secondsTimer.start(1000);
+    batteryTimer.start(500);
+
+
 
     init();
 
@@ -37,6 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::init() {
     ui->batteryLevelBar->setValue(batteryLevel);
+    ui->batteryLevelBar->setVisible(false);
     ui->recordButton->setEnabled(false);
     ui->powerButton->setText(powerOn? "Off" : "On");
     ui->timeSpinBox->setVisible(false);
@@ -91,6 +101,9 @@ void MainWindow::setUIState(){
     ui->timeWidget->setEnabled(powerOn);
     ui->sessionTypeWidget->setEnabled(powerOn);
     ui->powerButton->setText(powerOn? "Off" : "On");
+    ui->batteryLevelBar->setVisible(powerOn);
+
+
     timeWidget->setCurrentRow(0);
     sessionTypeWidget->setCurrentRow(0);
 
@@ -111,8 +124,34 @@ void MainWindow::handlePowerPressed(){
     pressedTime = QDateTime::currentSecsSinceEpoch();
 }
 
+//pass batteryflag arg
+// change highlighted color instead of set visible.
+void MainWindow::criticalBatteryUpdate(){
+    QString red = "QProgressBar { selection-background-color: red; background-color: rgb(255, 255, 255);color: }";
+    QString yellow = "QProgressBar { selection-background-color: yellow; background-color: rgb(255, 255, 255);color:black }";
+    QString green = "QProgressBar { selection-background-color: green; background-color: rgb(255, 255, 255); }";
+    if(batteryLevel<=criticalLevel && powerOn){
+        batteryFlag = !batteryFlag;
+        ui->batteryLevelBar->setVisible(batteryFlag);
+    }
+    if(batteryLevel<=30){
+        ui->batteryLevelBar->setStyleSheet(red);
+    }
+    else if(batteryLevel>=65){
+        ui->batteryLevelBar->setStyleSheet(green);
+    }
+    else if(batteryLevel>30 && batteryLevel<65){
+        ui->batteryLevelBar->setStyleSheet(yellow);
+    }
+
+
+}
+
+
+
 void MainWindow::handlePowerButton() {
     quint64 releasedTime = QDateTime::currentSecsSinceEpoch();
+
     if((releasedTime-pressedTime)>1){
         // if battery is too low to start device
         if(!powerOn && batteryLevel == 0) {
@@ -215,22 +254,25 @@ void MainWindow::updateTimeLabel(){
 }
 
 void MainWindow::handleSelectButton() {
-    selectCounter++;
-    int timeToSet = durationList[timeWidget->currentRow()];
-//    timeToSet = timeToSet? timeToSet : 60*60;       // 60*60 is an arbitrary max value
-    if(timeWidget->currentRow() == 2) {
-        timeToSet = ui->timeSpinBox->value();
+
+    if(batteryLevel>criticalLevel){
+        selectCounter++;
+        int timeToSet = durationList[timeWidget->currentRow()];
+    //    timeToSet = timeToSet? timeToSet : 60*60;       // 60*60 is an arbitrary max value
+        if(timeWidget->currentRow() == 2) {
+            timeToSet = ui->timeSpinBox->value();
+        }
+        sessionTimer.start((timeToSet) * 1000);
+        updateTimeLabel();
+
+        QString sessionName = sessionList[sessionTypeWidget->currentRow()];
+        Session *s = new Session(sessionName);
+        record->setSession(s);
+
+        record->setDuration(durationList[timeWidget->currentRow()]);
+
+        progressBar->setValue(record->getIntensity()+1);
     }
-    sessionTimer.start((timeToSet) * 1000);
-    updateTimeLabel();
-
-    QString sessionName = sessionList[sessionTypeWidget->currentRow()];
-    Session *s = new Session(sessionName);
-    record->setSession(s);
-
-    record->setDuration(durationList[timeWidget->currentRow()]);
-
-    progressBar->setValue(record->getIntensity()+1);
 
     qInfo("Select button pressed");
 }
@@ -297,13 +339,21 @@ void MainWindow::perSecondUpdate() {
             // should use the sessionEnd function to gracefully end session
         }
     }
+    if(batteryLevel<=criticalLevel && powerOn){
+        sessionEnd();
+    }
 }
 
 // called when sessionTimer runs out
 // can also be called when device powers off mid session
 void MainWindow::sessionEnd() {
+
+    progressBar->setValue(1);
+
     sessionTimer.stop();
     selectCounter = 1;
+    ui->recordButton->setEnabled(true);
+
     // perform soft off
     // change selectCounter
     // if !powerOn -- move clearing record information from handlePowerButton to here

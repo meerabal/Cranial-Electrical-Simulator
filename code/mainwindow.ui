@@ -850,9 +850,9 @@
        <colorrole role="Highlight">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
-          <red>222</red>
-          <green>174</green>
-          <blue>162</blue>
+          <red>0</red>
+          <green>168</green>
+          <blue>129</blue>
          </color>
         </brush>
        </colorrole>
@@ -861,9 +861,9 @@
        <colorrole role="Highlight">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
-          <red>222</red>
-          <green>174</green>
-          <blue>162</blue>
+          <red>0</red>
+          <green>168</green>
+          <blue>129</blue>
          </color>
         </brush>
        </colorrole>
@@ -949,9 +949,9 @@
        <colorrole role="Highlight">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
-          <red>161</red>
-          <green>217</green>
-          <blue>140</blue>
+          <red>0</red>
+          <green>168</green>
+          <blue>129</blue>
          </color>
         </brush>
        </colorrole>
@@ -960,9 +960,9 @@
        <colorrole role="Highlight">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
-          <red>161</red>
-          <green>217</green>
-          <blue>140</blue>
+          <red>0</red>
+          <green>168</green>
+          <blue>129</blue>
          </color>
         </brush>
        </colorrole>
@@ -1405,6 +1405,43 @@
       <width>45</width>
       <height>26</height>
      </rect>
+    </property>
+    <property name="palette">
+     <palette>
+      <active>
+       <colorrole role="Highlight">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>0</red>
+          <green>168</green>
+          <blue>129</blue>
+         </color>
+        </brush>
+       </colorrole>
+      </active>
+      <inactive>
+       <colorrole role="Highlight">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>0</red>
+          <green>168</green>
+          <blue>129</blue>
+         </color>
+        </brush>
+       </colorrole>
+      </inactive>
+      <disabled>
+       <colorrole role="Highlight">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>145</red>
+          <green>145</green>
+          <blue>145</blue>
+         </color>
+        </brush>
+       </colorrole>
+      </disabled>
+     </palette>
     </property>
    </widget>
    <widget class="QLabel" name="timerLabel">
