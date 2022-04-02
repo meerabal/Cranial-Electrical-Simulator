@@ -16,6 +16,7 @@
 #define PHASE_SELECT    1
 #define PHASE_CONN      2
 #define PHASE_RUN       3
+#define PHASE_END       4
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -58,6 +59,7 @@ private:
     void init();
     void setUIState();
     void updateTimeLabel();
+    void updateLEDs();
 
 private slots:
     // slots handling the input

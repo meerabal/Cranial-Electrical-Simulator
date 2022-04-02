@@ -140,13 +140,13 @@ void MainWindow::criticalBatteryUpdate(){
         batteryFlag = !batteryFlag;
         ui->batteryLevelBar->setVisible(batteryFlag);
     }
-    if(batteryLevel<=30){
+    if(batteryLevel<=10){
         ui->batteryLevelBar->setStyleSheet(red);
     }
-    else if(batteryLevel>=65){
+    else if(batteryLevel>30){
         ui->batteryLevelBar->setStyleSheet(green);
     }
-    else if(batteryLevel>30 && batteryLevel<65){
+    else if(batteryLevel>10 && batteryLevel<=30){
         ui->batteryLevelBar->setStyleSheet(yellow);
     }
 
@@ -275,6 +275,7 @@ void MainWindow::handleSelectButton() {
     if(batteryLevel>criticalLevel){
         if(selectCounter == PHASE_SELECT || selectCounter == PHASE_CONN) {
             selectCounter++;
+            handleSlider();
         }
 //        if (selectCounter == PHASE_CONN) {
 //            connStartTime = QDateTime::currentSecsSinceEpoch();
@@ -294,6 +295,9 @@ void MainWindow::handleSelectButton() {
             record->setSession(s);
 
             record->setDuration(durationList[timeWidget->currentRow()]);
+            if(timeWidget->currentRow() == 2) {
+                record->setDuration(ui->timeSpinBox->value());
+            }
 
             progressBar->setValue(record->getIntensity()+1);
         }
@@ -317,35 +321,6 @@ void MainWindow::handleRecordButton(){
 void MainWindow::handleSlider(){
 //    qDebug() << "slider value: " << slider->value() << "phase: " << selectCounter;
 
-    QString style = "";
-    int progressBarVal = 1;
-    switch(slider->value()) {
-        case 0:
-            ui->selectButton->setEnabled(powerOn);
-            style = "QLabel { background-color: green; color: white; }";
-            progressBarVal = 3;
-            break;
-        case 1:
-            ui->selectButton->setEnabled(powerOn);
-            style = "QLabel { background-color: yellow; color: black; }";
-            progressBarVal = 6;
-            break;
-        case 2:
-            ui->selectButton->setEnabled(false);
-            style = "QLabel { background-color: red; color: white; }";
-            progressBarVal = 8;
-            break;
-
-    }
-    if(!powerOn || selectCounter != PHASE_CONN) {
-        style = "QLabel { background-color: transparent; color: black; }";
-    }
-    else if (powerOn && selectCounter == PHASE_CONN) {
-        progressBar->setValue(progressBarVal);
-    }
-    ui->leftLightLabel->setStyleSheet(style);
-    ui->rightLightLabel->setStyleSheet(style);
-
     if(selectCounter == PHASE_RUN && slider->value()==2 && pausedTime == 0) {
         // disconnect it
         // pause timer
@@ -366,11 +341,45 @@ void MainWindow::handleSlider(){
 
 }
 
+void MainWindow::updateLEDs() {
+    QString style = "";
+    int progressBarVal = 1;
+    switch(slider->value()) {
+        case 0:
+            ui->selectButton->setEnabled(powerOn);
+            style = "QLabel { background-color: green; color: white; }";
+            progressBarVal = 3;
+            break;
+        case 1:
+            ui->selectButton->setEnabled(powerOn);
+            style = "QLabel { background-color: yellow; color: black; }";
+            progressBarVal = 6;
+            break;
+        case 2:
+            ui->selectButton->setEnabled(false);
+            style = "QLabel { background-color: red; color: white; }";
+            progressBarVal = 8;
+            break;
+
+    }
+    // off or not connection
+    if(!powerOn || selectCounter != PHASE_CONN) {
+        style = "QLabel { background-color: transparent; color: black; }";
+    }
+    // on and connection
+    else if (powerOn && selectCounter == PHASE_CONN) {
+        progressBar->setValue(progressBarVal);
+    }
+    ui->leftLightLabel->setStyleSheet(style);
+    ui->rightLightLabel->setStyleSheet(style);
+}
+
 void MainWindow::perSecondUpdate() {
     qDebug() << "slider value: " << slider->value() << "phase: " << selectCounter;
     // if session is on:
     // update battery level
     // update session timer
+    updateLEDs();
     if (selectCounter == PHASE_CONN && slider->value() != 2) {
         connWaitTime++;
         qDebug() << "connWaitTime:" << connWaitTime;
@@ -380,6 +389,7 @@ void MainWindow::perSecondUpdate() {
                 sessionTimer.start(pausedTime+1);
                 qDebug() << "resumed pausedTime:" << pausedTime;
                 pausedTime = 0;
+                progressBar->setValue(record->getIntensity() + 1);
             }
             else {
                 handleSelectButton();
@@ -398,8 +408,13 @@ void MainWindow::perSecondUpdate() {
             // should use the sessionEnd function to gracefully end session
         }
     }
-    if(batteryLevel<=criticalLevel && powerOn){
-        sessionEnd();
+    if(powerOn && selectCounter == PHASE_END){
+        qDebug() << "line 408";
+        record->decrementIntensity();
+        progressBar->setValue(progressBar->value() - 1);
+        if(progressBar->value() == 1) {
+            selectCounter = PHASE_SELECT;
+        }
     }
 }
 
@@ -407,13 +422,16 @@ void MainWindow::perSecondUpdate() {
 // can also be called when device powers off mid session
 void MainWindow::sessionEnd() {
 //    for(int i=progressBar->maximum(); i>=1;i--){
-//            progressBar->setValue(i);
-//            usleep(1000);
-//        }
-    progressBar->setValue(1);
+//        record->decrementIntensity();
+//        progressBar->setValue(i);
+//        usleep(1000);
+//    }
 
     sessionTimer.stop();
-    selectCounter = PHASE_SELECT;
+    qDebug() << "line 427";
+    progressBar->setValue(progressBar->maximum());
+    usleep(1000);
+    selectCounter = PHASE_END;
     if(batteryLevel>criticalLevel) {
         ui->recordButton->setEnabled(true);
     }
