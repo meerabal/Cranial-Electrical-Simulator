@@ -54,7 +54,7 @@ private:
     // selectCounter == 2 -- on session running state (this should be connection test state)
     // selectCounter == 3 -- (should be session running state)
     quint64 pressedTime;
-    quint64 connStartTime;
+    int connWaitTime;
     void init();
     void setUIState();
     void updateTimeLabel();
