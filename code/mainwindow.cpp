@@ -171,7 +171,16 @@ void MainWindow::handlePowerButton() {
         }
         else {
             sessionEnd();
-            delete record;
+            char flag = 0;
+            for(Record *r : recordList) {
+                if(r == record) {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (!flag) {
+                delete record;
+            }
             record = NULL;
         }
     }
@@ -292,7 +301,15 @@ void MainWindow::handleSelectButton() {
 }
 
 void MainWindow::handleRecordButton(){
-
+    // add record to recordList
+    // update record widget
+    recordList.append(record);
+    ui->historyWidget->clear();
+    for(Record *r : recordList) {
+        ui->historyWidget->addItem(r->getRecordString());
+    }
+    record = new Record();
+    ui->recordButton->setDisabled(true);
 }
 
 void MainWindow::handleSlider(){
