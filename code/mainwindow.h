@@ -12,6 +12,11 @@
 #include <unistd.h>
 #include "Record.h"
 
+#define PHASE_OFF       0
+#define PHASE_SELECT    1
+#define PHASE_CONN      2
+#define PHASE_RUN       3
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -49,6 +54,7 @@ private:
     // selectCounter == 2 -- on session running state (this should be connection test state)
     // selectCounter == 3 -- (should be session running state)
     quint64 pressedTime;
+    quint64 connStartTime;
     void init();
     void setUIState();
     void updateTimeLabel();
