@@ -8,7 +8,7 @@ MainWindow::MainWindow(QWidget *parent)
       connection(8),
       record(NULL),
       pausedTime(0),
-      batteryLevel(15),
+      batteryLevel(34),
       selectCounter(PHASE_OFF),
       criticalLevel(10),
       batteryFlag(true),
@@ -50,7 +50,6 @@ void MainWindow::init() {
 //    ui->batteryLevelBar->setVisible(false);
     ui->recordButton->setEnabled(false);
     ui->powerButton->setText(powerOn? "Off" : "On");
-    ui->timeSpinBox->setVisible(false);
 
     // populate duration list
     durationList << 20 << 45 << 0;
@@ -105,6 +104,7 @@ void MainWindow::setUIState(){
     ui->batteryLevelBar->setVisible(powerOn);
     ui->timerLabel->setVisible(powerOn);
     ui->timeElapsedLabel->setVisible(powerOn);
+    ui->timeSpinBox->setVisible(powerOn);
     if(powerOn && selectCounter == PHASE_SELECT) {
         updateTimeLabel();
     }
@@ -157,8 +157,9 @@ void MainWindow::criticalBatteryUpdate(){
 
 void MainWindow::handlePowerButton() {
     quint64 releasedTime = QDateTime::currentSecsSinceEpoch();
-
+    qDebug() << "power:" << powerOn;
     if((releasedTime-pressedTime)>1){
+        qDebug() << "powerin:" << powerOn;
         // if battery is too low to start device
         if(!powerOn && batteryLevel == 0) {
             return;
@@ -181,7 +182,6 @@ void MainWindow::handlePowerButton() {
             if (!flag) {
                 delete record;
             }
-            record = NULL;
         }
     }
     // select time duration
@@ -319,7 +319,6 @@ void MainWindow::handleRecordButton(){
 }
 
 void MainWindow::handleSlider(){
-//    qDebug() << "slider value: " << slider->value() << "phase: " << selectCounter;
 
     if(selectCounter == PHASE_RUN && slider->value()==2 && pausedTime == 0) {
         // disconnect it
@@ -329,15 +328,6 @@ void MainWindow::handleSlider(){
         qDebug() << "pausedTime:" << pausedTime;
         sessionTimer.stop();
     }
-//    if(selectCounter == PHASE_CONN && slider->value()!=2 && pausedTime > 0) {
-//        connStartTime = QDateTime::currentSecsSinceEpoch();
-//    }
-//    else if(selectCounter == PHASE_CONN && slider->value()!=2 && pausedTime > 0) {
-//        selectCounter = PHASE_RUN;
-//        sessionTimer.start(pausedTime+1);
-//        qDebug() << "resumed pausedTime:" << pausedTime;
-//        pausedTime = 0;
-//    }
 
 }
 
@@ -389,6 +379,7 @@ void MainWindow::perSecondUpdate() {
                 sessionTimer.start(pausedTime+1);
                 qDebug() << "resumed pausedTime:" << pausedTime;
                 pausedTime = 0;
+                connWaitTime = 0;
                 progressBar->setValue(record->getIntensity() + 1);
             }
             else {
@@ -396,7 +387,7 @@ void MainWindow::perSecondUpdate() {
             }
         }
     }
-    if(selectCounter >= PHASE_RUN && slider->value() <= 1) {
+    if(selectCounter == PHASE_RUN && slider->value() <= 1) {
         updateTimeLabel();
         batteryLevel = batteryLevel - (0.1 * (record->getIntensity() + 0.5));
         batteryLevel = batteryLevel < 0? 0 : batteryLevel;
@@ -410,7 +401,7 @@ void MainWindow::perSecondUpdate() {
     }
     if(powerOn && selectCounter == PHASE_END){
         qDebug() << "line 408";
-        record->decrementIntensity();
+//        record->decrementIntensity();
         progressBar->setValue(progressBar->value() - 1);
         if(progressBar->value() == 1) {
             selectCounter = PHASE_SELECT;
@@ -421,24 +412,13 @@ void MainWindow::perSecondUpdate() {
 // called when sessionTimer runs out
 // can also be called when device powers off mid session
 void MainWindow::sessionEnd() {
-//    for(int i=progressBar->maximum(); i>=1;i--){
-//        record->decrementIntensity();
-//        progressBar->setValue(i);
-//        usleep(1000);
-//    }
-
     sessionTimer.stop();
     qDebug() << "line 427";
     progressBar->setValue(progressBar->maximum());
-    usleep(1000);
+//    usleep(1000000);
     selectCounter = PHASE_END;
     if(batteryLevel>criticalLevel) {
         ui->recordButton->setEnabled(true);
     }
-
-    // perform soft off
-    // change selectCounter
-    // if !powerOn -- move clearing record information from handlePowerButton to here
-    // give option to add session to record
 }
 
