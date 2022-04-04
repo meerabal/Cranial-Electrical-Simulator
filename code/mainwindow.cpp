@@ -90,7 +90,7 @@ MainWindow::~MainWindow()
 {
     delete ui;
     // record should not delete if it is stored in history
-    delete record;
+//    delete record;
     for(Record *r : recordList) {
         if(r != NULL) {
             delete r;
@@ -100,7 +100,7 @@ MainWindow::~MainWindow()
 }
 
 void MainWindow::setUIState(bool isCrit){
-    if(!isCrit ){
+    if(!isCrit) {
         ui->upButton->setEnabled(powerOn);
         ui->downButton->setEnabled(powerOn);
         ui->selectButton->setEnabled(powerOn);
@@ -202,13 +202,13 @@ void MainWindow::togglePowerOn(){
     selectCounter = powerOn? PHASE_SELECT : PHASE_OFF;
 
     if(powerOn) {
-
+        setUIState(batteryLevel<=criticalLevel);
         record = new Record();
     }
     else {
-        sessionEnd();
+//        sessionEnd();
 
-
+        setUIState(false);
         char flag = 0;
         for(Record *r : recordList) {
             if(r == record) {
@@ -221,10 +221,10 @@ void MainWindow::togglePowerOn(){
         }
 
     }
-    setUIState(batteryLevel<=criticalLevel);
 }
 
 void MainWindow::handleUpButton() {
+    idleTime = 0;
     // session type
     if(selectCounter == PHASE_SELECT){
         int newIndex = sessionTypeWidget->currentRow() - 1;
@@ -255,6 +255,7 @@ void MainWindow::handleUpButton() {
 }
 
 void MainWindow::handleDownButton() {
+    idleTime = 0;
     // session type
     if(selectCounter == PHASE_SELECT){
         int newIndex = sessionTypeWidget->currentRow() + 1;
@@ -290,6 +291,7 @@ void MainWindow::updateTimeLabel(){
 }
 
 void MainWindow::handleSelectButton() {
+    idleTime = 0;
     ui->recordButton->setEnabled(false);
 
     if(batteryLevel>criticalLevel){
@@ -327,6 +329,7 @@ void MainWindow::handleSelectButton() {
 }
 
 void MainWindow::handleRecordButton(){
+    idleTime = 0;
     // add record to recordList
     // update record widget
     recordList.append(record);
@@ -339,6 +342,10 @@ void MainWindow::handleRecordButton(){
 }
 
 void MainWindow::handleSlider(){
+    idleTime = 0;
+    if(selectCounter == PHASE_CONN && slider->value() == 2) {
+        connWaitTime = 0;
+    }
 
     if(selectCounter == PHASE_RUN && slider->value()==2 && pausedTime == 0) {
         // disconnect it
@@ -407,19 +414,19 @@ void MainWindow::perSecondUpdate() {
             }
         }
     }
-    if(selectCounter == PHASE_RUN && slider->value() <= 1) {
+    if(selectCounter == PHASE_RUN && slider->value() != 2) {
         updateTimeLabel();
         batteryLevel = batteryLevel - (0.1 * (record->getIntensity() + 0.5));
         batteryLevel = batteryLevel < 0? 0 : batteryLevel;
         int displayBattery = ceil(batteryLevel);
         ui->batteryLevelBar->setValue(displayBattery);
 
-        if(batteryLevel == 0) {
-            handlePowerButton();    // temporary fix for now
-            // should use the sessionEnd function to gracefully end session
+        if(batteryLevel <= criticalLevel) {
+            setUIState(true);
+            sessionEnd();
         }
     }
-    if(powerOn && selectCounter == PHASE_END){
+    else if(powerOn && selectCounter == PHASE_END){
         qDebug() << "line 408";
 //        record->decrementIntensity();
 
@@ -431,7 +438,7 @@ void MainWindow::perSecondUpdate() {
     }
     if(powerOn && selectCounter == PHASE_SELECT){
         idleTime++;
-        if(idleTime == 30){
+        if(idleTime == MAX_IDLE_TIME){
             //idleTime=0;
             togglePowerOn();
 

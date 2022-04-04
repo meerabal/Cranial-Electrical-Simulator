@@ -17,6 +17,7 @@
 #define PHASE_CONN      2
 #define PHASE_RUN       3
 #define PHASE_END       4
+#define MAX_IDLE_TIME   20
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
