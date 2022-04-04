@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+//normal battery to critical session runs.
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow),
@@ -8,11 +10,12 @@ MainWindow::MainWindow(QWidget *parent)
       connection(8),
       record(NULL),
       pausedTime(0),
-      batteryLevel(34),
+      batteryLevel(11),
       selectCounter(PHASE_OFF),
       criticalLevel(10),
       batteryFlag(true),
-      connWaitTime(0)
+      connWaitTime(0),
+      idleTime(0)
 
 {
 
@@ -49,7 +52,8 @@ void MainWindow::init() {
     ui->batteryLevelBar->setValue(batteryLevel);
 //    ui->batteryLevelBar->setVisible(false);
     ui->recordButton->setEnabled(false);
-    ui->powerButton->setText(powerOn? "Off" : "On");
+    ui->powerButton->setText(powerOn? "OFF" : "ON");
+    ui->timeSpinBox->setVisible(powerOn);
 
     // populate duration list
     durationList << 20 << 45 << 0;
@@ -78,7 +82,8 @@ void MainWindow::init() {
     }
 
     // set button state
-    setUIState();
+
+    setUIState(false);
 }
 
 MainWindow::~MainWindow()
@@ -94,37 +99,43 @@ MainWindow::~MainWindow()
 
 }
 
-void MainWindow::setUIState(){
-    ui->upButton->setEnabled(powerOn);
-    ui->downButton->setEnabled(powerOn);
-    ui->selectButton->setEnabled(powerOn);
-    ui->timeWidget->setEnabled(powerOn);
-    ui->sessionTypeWidget->setEnabled(powerOn);
-    ui->powerButton->setText(powerOn? "Off" : "On");
+void MainWindow::setUIState(bool isCrit){
+    if(!isCrit ){
+        ui->upButton->setEnabled(powerOn);
+        ui->downButton->setEnabled(powerOn);
+        ui->selectButton->setEnabled(powerOn);
+        ui->recordButton->setEnabled(false);
+        ui->timeWidget->setEnabled(powerOn);
+        ui->sessionTypeWidget->setEnabled(powerOn);
+        ui->timerLabel->setVisible(powerOn);
+        ui->timeElapsedLabel->setVisible(powerOn);
+        if(timeWidget->currentRow()==2){
+            ui->timeSpinBox->setVisible(powerOn);
+
+        }
+        slider->setEnabled(powerOn);
+        slider->setValue(0);
+        handleSlider();
+        if(!powerOn) {
+            ui->historyWidget->clear();
+        }
+        else {
+            for(Record *r : recordList) {
+                ui->historyWidget->addItem(r->getRecordString());
+            }
+        }
+    }
+    progressBar->setValue(1);
+    ui->powerButton->setText(powerOn? "OFF" : "ON");
     ui->batteryLevelBar->setVisible(powerOn);
-    ui->timerLabel->setVisible(powerOn);
-    ui->timeElapsedLabel->setVisible(powerOn);
-    ui->timeSpinBox->setVisible(powerOn);
+
     if(powerOn && selectCounter == PHASE_SELECT) {
         updateTimeLabel();
     }
 
-
     timeWidget->setCurrentRow(0);
     sessionTypeWidget->setCurrentRow(0);
 
-    slider->setEnabled(powerOn);
-    slider->setValue(0);
-    progressBar->setValue(1);
-    handleSlider();
-    if(!powerOn) {
-        ui->historyWidget->clear();
-    }
-    else {
-        for(Record *r : recordList) {
-            ui->historyWidget->addItem(r->getRecordString());
-        }
-    }
 }
 void MainWindow::handlePowerPressed(){
     pressedTime = QDateTime::currentSecsSinceEpoch();
@@ -164,25 +175,8 @@ void MainWindow::handlePowerButton() {
         if(!powerOn && batteryLevel == 0) {
             return;
         }
-        powerOn = !powerOn;
-        setUIState();
-        selectCounter = powerOn? PHASE_SELECT : PHASE_OFF;
-        if(powerOn) {
-            record = new Record();
-        }
-        else {
-            sessionEnd();
-            char flag = 0;
-            for(Record *r : recordList) {
-                if(r == record) {
-                    flag = 1;
-                    break;
-                }
-            }
-            if (!flag) {
-                delete record;
-            }
-        }
+        togglePowerOn();
+
     }
     // select time duration
     else if(powerOn && selectCounter == PHASE_SELECT){
@@ -202,6 +196,32 @@ void MainWindow::handlePowerButton() {
     }
 
     qInfo("Power button pressed");
+}
+void MainWindow::togglePowerOn(){
+    powerOn = !powerOn;
+    selectCounter = powerOn? PHASE_SELECT : PHASE_OFF;
+
+    if(powerOn) {
+
+        record = new Record();
+    }
+    else {
+        sessionEnd();
+
+
+        char flag = 0;
+        for(Record *r : recordList) {
+            if(r == record) {
+                flag = 1;
+                break;
+            }
+        }
+        if (!flag) {
+            delete record;
+        }
+
+    }
+    setUIState(batteryLevel<=criticalLevel);
 }
 
 void MainWindow::handleUpButton() {
@@ -336,12 +356,12 @@ void MainWindow::updateLEDs() {
     int progressBarVal = 1;
     switch(slider->value()) {
         case 0:
-            ui->selectButton->setEnabled(powerOn);
+            ui->selectButton->setEnabled(powerOn && batteryLevel>criticalLevel);
             style = "QLabel { background-color: green; color: white; }";
             progressBarVal = 3;
             break;
         case 1:
-            ui->selectButton->setEnabled(powerOn);
+            ui->selectButton->setEnabled(powerOn && batteryLevel>criticalLevel);
             style = "QLabel { background-color: yellow; color: black; }";
             progressBarVal = 6;
             break;
@@ -402,12 +422,22 @@ void MainWindow::perSecondUpdate() {
     if(powerOn && selectCounter == PHASE_END){
         qDebug() << "line 408";
 //        record->decrementIntensity();
+
         progressBar->setValue(progressBar->value() - 1);
+        updateTimeLabel();
         if(progressBar->value() == 1) {
             selectCounter = PHASE_SELECT;
         }
     }
-}
+    if(powerOn && selectCounter == PHASE_SELECT){
+        idleTime++;
+        if(idleTime == 30){
+            //idleTime=0;
+            togglePowerOn();
+
+        }
+    }
+ }
 
 // called when sessionTimer runs out
 // can also be called when device powers off mid session
@@ -415,8 +445,10 @@ void MainWindow::sessionEnd() {
     sessionTimer.stop();
     qDebug() << "line 427";
     progressBar->setValue(progressBar->maximum());
+    secondsTimer.start(1000);
 //    usleep(1000000);
     selectCounter = PHASE_END;
+    idleTime=0;
     if(batteryLevel>criticalLevel) {
         ui->recordButton->setEnabled(true);
     }

@@ -46,6 +46,7 @@ private:
     QTimer batteryTimer;
     bool batteryFlag;
     bool powerOn;
+
     int connection;           // unused yet
     float batteryLevel;
     float criticalLevel;
@@ -55,11 +56,13 @@ private:
     // selectCounter == 2 -- on session running state (this should be connection test state)
     // selectCounter == 3 -- (should be session running state)
     quint64 pressedTime;
+    int idleTime;
     int connWaitTime;
     void init();
-    void setUIState();
+    void setUIState(bool isCritical);
     void updateTimeLabel();
     void updateLEDs();
+    void togglePowerOn();
 
 private slots:
     // slots handling the input
