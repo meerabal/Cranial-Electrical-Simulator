@@ -1,32 +1,26 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-//normal battery to critical session runs.
 
+// This is the MainWindow where most of the functionality is
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow),
-      powerOn(false),
-      connection(8),
       record(NULL),
-      pausedTime(0),
-      batteryLevel(11),
-      selectCounter(PHASE_OFF),
       criticalLevel(10),
+      phase(PHASE_OFF),
+      powerOn(false),
+      batteryLevel(100),
       batteryFlag(true),
       connWaitTime(0),
+      pausedTime(0),
       idleTime(0)
-
 {
-
     ui->setupUi(this);
     progressBar = ui->displayBar;
-    slider= ui->connectionSlider;
+    slider = ui->connectionSlider;
     timeWidget = ui->timeWidget;
     sessionTypeWidget = ui->sessionTypeWidget;
-//    ui->batteryLevelBar->setVisible(false);
-
-
 
     connect(ui->powerButton, SIGNAL(released()), this, SLOT(handlePowerButton()));
     connect(ui->powerButton, SIGNAL(pressed()), this, SLOT(handlePowerPressed()));
@@ -42,20 +36,31 @@ MainWindow::MainWindow(QWidget *parent)
     secondsTimer.start(1000);
     batteryTimer.start(500);
 
-
-
     init();
 
 }
 
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+    // record should not delete if it is stored in history
+    for(Record *r : recordList) {
+        if(r != NULL) {
+            delete r;
+        }
+    }
+
+}
+
+
 void MainWindow::init() {
     ui->batteryLevelBar->setValue(batteryLevel);
-//    ui->batteryLevelBar->setVisible(false);
     ui->recordButton->setEnabled(false);
     ui->powerButton->setText(powerOn? "OFF" : "ON");
     ui->timeSpinBox->setVisible(powerOn);
 
-    // populate duration list
+    // populate duration list and widget
     durationList << 20 << 45 << 0;
     for(int time : durationList) {
         QString timeStr = QString::number(time) + " min";
@@ -65,42 +70,21 @@ void MainWindow::init() {
         timeWidget->addItem(timeStr);
     }
 
-    // populate session list
+    // populate session list and widget
     sessionList << "Delta" << "Theta" << "Alpha" << "Beta";
     sessionTypeWidget->addItems(sessionList);
 
-    // do we need a list of previous dummy records?
-    Session *s1 = new Session("Delta", 5);
-    Session *s2 = new Session("Beta", 8);
-    recordList.append(new Record(45, 5, s1));
-    recordList.append(new Record());    // can handle null sessions as well
-    recordList.append(new Record(20, 2, s2));
-    recordList.append(new Record());
-
+    // populate the history widget
     for(Record *r : recordList) {
         ui->historyWidget->addItem(r->getRecordString());
     }
 
-    // set button state
-
     setUIState(false);
 }
 
-MainWindow::~MainWindow()
-{
-    delete ui;
-    // record should not delete if it is stored in history
-//    delete record;
-    for(Record *r : recordList) {
-        if(r != NULL) {
-            delete r;
-        }
-    }
 
-}
-
-void MainWindow::setUIState(bool isCrit){
-    if(!isCrit) {
+void MainWindow::setUIState(bool partial){
+    if(!partial) {
         ui->upButton->setEnabled(powerOn);
         ui->downButton->setEnabled(powerOn);
         ui->selectButton->setEnabled(powerOn);
@@ -109,9 +93,8 @@ void MainWindow::setUIState(bool isCrit){
         ui->sessionTypeWidget->setEnabled(powerOn);
         ui->timerLabel->setVisible(powerOn);
         ui->timeElapsedLabel->setVisible(powerOn);
-        if(timeWidget->currentRow()==2){
+        if(timeWidget->currentRow()==2) {
             ui->timeSpinBox->setVisible(powerOn);
-
         }
         slider->setEnabled(powerOn);
         slider->setValue(0);
@@ -129,7 +112,7 @@ void MainWindow::setUIState(bool isCrit){
     ui->powerButton->setText(powerOn? "OFF" : "ON");
     ui->batteryLevelBar->setVisible(powerOn);
 
-    if(powerOn && selectCounter == PHASE_SELECT) {
+    if(powerOn && phase == PHASE_SELECT) {
         updateTimeLabel();
     }
 
@@ -137,49 +120,23 @@ void MainWindow::setUIState(bool isCrit){
     sessionTypeWidget->setCurrentRow(0);
 
 }
+
+
 void MainWindow::handlePowerPressed(){
     pressedTime = QDateTime::currentSecsSinceEpoch();
 }
 
-//pass batteryflag arg
-// change highlighted color instead of set visible.
-void MainWindow::criticalBatteryUpdate(){
-    QString red = "QProgressBar { selection-background-color: red; background-color: rgb(255, 255, 255);color: }";
-    QString yellow = "QProgressBar { selection-background-color: yellow; background-color: rgb(255, 255, 255);color:black }";
-    QString green = "QProgressBar { selection-background-color: green; background-color: rgb(255, 255, 255); }";
-    if(batteryLevel<=criticalLevel && powerOn){
-        batteryFlag = !batteryFlag;
-        ui->batteryLevelBar->setVisible(batteryFlag);
-    }
-    if(batteryLevel<=10){
-        ui->batteryLevelBar->setStyleSheet(red);
-    }
-    else if(batteryLevel>30){
-        ui->batteryLevelBar->setStyleSheet(green);
-    }
-    else if(batteryLevel>10 && batteryLevel<=30){
-        ui->batteryLevelBar->setStyleSheet(yellow);
-    }
-
-
-}
-
-
 
 void MainWindow::handlePowerButton() {
+    idleTime = 0;
     quint64 releasedTime = QDateTime::currentSecsSinceEpoch();
-    qDebug() << "power:" << powerOn;
-    if((releasedTime-pressedTime)>1){
-        qDebug() << "powerin:" << powerOn;
-        // if battery is too low to start device
-        if(!powerOn && batteryLevel == 0) {
-            return;
-        }
-        togglePowerOn();
 
+    // long press - toggle on/off
+    if((releasedTime-pressedTime)>1){
+        togglePowerOn();
     }
-    // select time duration
-    else if(powerOn && selectCounter == PHASE_SELECT){
+    // short press - select time duration
+    else if(powerOn && phase == PHASE_SELECT){
         int newIndex = timeWidget->currentRow() + 1;
 
         if (newIndex >= timeWidget->count()) {
@@ -195,21 +152,24 @@ void MainWindow::handlePowerButton() {
         }
     }
 
-    qInfo("Power button pressed");
+    qDebug() << "Power button released";
 }
+
+
 void MainWindow::togglePowerOn(){
     powerOn = !powerOn;
-    selectCounter = powerOn? PHASE_SELECT : PHASE_OFF;
+    phase = powerOn? PHASE_SELECT : PHASE_OFF;
 
     if(powerOn) {
+        sessionTimer.stop();
+        // set UI state partially if battery level is critical
         setUIState(batteryLevel<=criticalLevel);
         record = new Record();
     }
     else {
-//        sessionEnd();
-
         setUIState(false);
         char flag = 0;
+        // if record is saved in recordList, do not delete it
         for(Record *r : recordList) {
             if(r == record) {
                 flag = 1;
@@ -223,10 +183,36 @@ void MainWindow::togglePowerOn(){
     }
 }
 
+
+void MainWindow::criticalBatteryUpdate(){
+    QString red = "QProgressBar { selection-background-color: red; background-color: rgb(255, 255, 255); }";
+    QString yellow = "QProgressBar { selection-background-color: yellow; background-color: rgb(255, 255, 255); }";
+    QString green = "QProgressBar { selection-background-color: green; background-color: rgb(255, 255, 255); }";
+
+    // set batteryFlag for blinking
+    if(batteryLevel<=criticalLevel && powerOn){
+        batteryFlag = !batteryFlag;
+        ui->batteryLevelBar->setVisible(batteryFlag);
+    }
+
+    // set battery bar color
+    if(batteryLevel<=10){
+        ui->batteryLevelBar->setStyleSheet(red);
+    }
+    else if(batteryLevel>30){
+        ui->batteryLevelBar->setStyleSheet(green);
+    }
+    else if(batteryLevel>10 && batteryLevel<=30){
+        ui->batteryLevelBar->setStyleSheet(yellow);
+    }
+}
+
+
 void MainWindow::handleUpButton() {
     idleTime = 0;
-    // session type
-    if(selectCounter == PHASE_SELECT){
+
+    // in selection phase - session type selection
+    if(phase == PHASE_SELECT){
         int newIndex = sessionTypeWidget->currentRow() - 1;
 
         if (newIndex < 0) {
@@ -236,8 +222,8 @@ void MainWindow::handleUpButton() {
         sessionTypeWidget->setCurrentRow(newIndex);
     }
 
-    // intensity
-    else if (selectCounter >= PHASE_RUN){
+    // increase intensity
+    else if (phase >= PHASE_RUN){
         int newIndex = progressBar->value() + 1;
 
         if (newIndex > progressBar->maximum()) {
@@ -246,18 +232,18 @@ void MainWindow::handleUpButton() {
 
         progressBar->setValue(newIndex);
         record->incrementIntensity();
-        qDebug() << "intensity " << record->getIntensity();
+        qDebug() << "Intensity incremented to" << record->getIntensity();
     }
 
-    qInfo("Up button pressed");
-
-
+    qDebug() << "UP button pressed";
 }
+
 
 void MainWindow::handleDownButton() {
     idleTime = 0;
-    // session type
-    if(selectCounter == PHASE_SELECT){
+
+    // in selection phase - session type selection
+    if(phase == PHASE_SELECT){
         int newIndex = sessionTypeWidget->currentRow() + 1;
 
         if (newIndex >= sessionTypeWidget->count()) {
@@ -266,8 +252,8 @@ void MainWindow::handleDownButton() {
         sessionTypeWidget->setCurrentRow(newIndex);
     }
 
-    // intensity
-    else if(selectCounter >= PHASE_RUN){
+    // decrease intensity
+    else if(phase >= PHASE_RUN){
         int newIndex = progressBar->value() - 1;
 
         if (newIndex < 1) {
@@ -276,36 +262,36 @@ void MainWindow::handleDownButton() {
 
         progressBar->setValue(newIndex);
         record->decrementIntensity();
-        qDebug() << "intensity " << record->getIntensity();
-
+        qDebug() << "Intensity decremented to" << record->getIntensity();
     }
 
-    qInfo("Down button pressed");
+    qDebug() << "DOWN button pressed";
 }
 
+
 void MainWindow::updateTimeLabel(){
-     int s = sessionTimer.remainingTime() / 1000;  // counts down
-//    int s = (sessionTimer.interval() - sessionTimer.remainingTime()) / 1000;     // counts up
-    QString timeString = QString::number(s/60) + ((s%60 < 10) ? + ":0" + QString::number(s%60) : + ":" + QString::number(s%60));
+    int s = sessionTimer.remainingTime() / 1000;  // counts down
+    // format h:mm:ss
+    QString timeString = QString::number(s/60) + ((s%60 < 10) ? + ":0" + QString::number(s%60) : + ":" + QString::number(s%60)) + ":00";
     ui->timeElapsedLabel->setText(timeString);
 }
+
 
 void MainWindow::handleSelectButton() {
     idleTime = 0;
     ui->recordButton->setEnabled(false);
 
     if(batteryLevel>criticalLevel){
-        if(selectCounter == PHASE_SELECT || selectCounter == PHASE_CONN) {
-            selectCounter++;
+        // increment phase if slider has connection
+        if(phase == PHASE_SELECT || phase == PHASE_CONN) {
+            phase++;
             handleSlider();
         }
-//        if (selectCounter == PHASE_CONN) {
-//            connStartTime = QDateTime::currentSecsSinceEpoch();
-//        }
-        if (selectCounter == PHASE_RUN) {
+
+        // to run therapy
+        if (phase == PHASE_RUN) {
             connWaitTime = 0;
             int timeToSet = durationList[timeWidget->currentRow()];
-        //    timeToSet = timeToSet? timeToSet : 60*60;       // 60*60 is an arbitrary max value
             if(timeWidget->currentRow() == 2) {
                 timeToSet = ui->timeSpinBox->value();
             }
@@ -325,13 +311,13 @@ void MainWindow::handleSelectButton() {
         }
     }
 
-    qInfo("Select button pressed");
+    qDebug() << "SELECT Button pressed";
 }
 
 void MainWindow::handleRecordButton(){
     idleTime = 0;
-    // add record to recordList
-    // update record widget
+
+    // add record to recordList and update record widget
     recordList.append(record);
     ui->historyWidget->clear();
     for(Record *r : recordList) {
@@ -341,68 +327,73 @@ void MainWindow::handleRecordButton(){
     ui->recordButton->setEnabled(false);
 }
 
+
 void MainWindow::handleSlider(){
     idleTime = 0;
-    if(selectCounter == PHASE_CONN && slider->value() == 2) {
+
+    // when no connection in connection phase, connWaitTime should not increment
+    if(phase == PHASE_CONN && slider->value() == NO_CONN) {
         connWaitTime = 0;
     }
 
-    if(selectCounter == PHASE_RUN && slider->value()==2 && pausedTime == 0) {
-        // disconnect it
-        // pause timer
-        selectCounter = PHASE_CONN;
+    // when no connection in session run phase, and not previously paused
+    if(phase == PHASE_RUN && slider->value() == NO_CONN && pausedTime == 0) {
+        // pause timer and go to connection phase
+        phase = PHASE_CONN;
         pausedTime = sessionTimer.remainingTime();
         qDebug() << "pausedTime:" << pausedTime;
         sessionTimer.stop();
     }
-
+    qDebug() << "Connection slider moved to" << ui->connectionSlider->value();
 }
+
 
 void MainWindow::updateLEDs() {
     QString style = "";
     int progressBarVal = 1;
     switch(slider->value()) {
-        case 0:
+        case EXCELLENT_CONN:
             ui->selectButton->setEnabled(powerOn && batteryLevel>criticalLevel);
             style = "QLabel { background-color: green; color: white; }";
             progressBarVal = 3;
             break;
-        case 1:
+        case OK_CONN:
             ui->selectButton->setEnabled(powerOn && batteryLevel>criticalLevel);
             style = "QLabel { background-color: yellow; color: black; }";
             progressBarVal = 6;
             break;
-        case 2:
+        case NO_CONN:
             ui->selectButton->setEnabled(false);
             style = "QLabel { background-color: red; color: white; }";
             progressBarVal = 8;
             break;
 
     }
-    // off or not connection
-    if(!powerOn || selectCounter != PHASE_CONN) {
+    // off or not in connection phase
+    if(!powerOn || phase != PHASE_CONN) {
         style = "QLabel { background-color: transparent; color: black; }";
     }
-    // on and connection
-    else if (powerOn && selectCounter == PHASE_CONN) {
+    // on and in connection phase
+    else if (powerOn && phase == PHASE_CONN) {
         progressBar->setValue(progressBarVal);
     }
     ui->leftLightLabel->setStyleSheet(style);
     ui->rightLightLabel->setStyleSheet(style);
 }
 
+
 void MainWindow::perSecondUpdate() {
-    qDebug() << "slider value: " << slider->value() << "phase: " << selectCounter;
-    // if session is on:
-    // update battery level
-    // update session timer
+    qDebug() << "phase: " << phase;
+
     updateLEDs();
-    if (selectCounter == PHASE_CONN && slider->value() != 2) {
+
+    // connection phase, device has connection - start/resume therapy
+    if (phase == PHASE_CONN && slider->value() != NO_CONN) {
         connWaitTime++;
         qDebug() << "connWaitTime:" << connWaitTime;
         if (connWaitTime >= 5) {
             if(pausedTime > 0) {
-                selectCounter = PHASE_RUN;
+                phase = PHASE_RUN;
                 sessionTimer.start(pausedTime+1);
                 qDebug() << "resumed pausedTime:" << pausedTime;
                 pausedTime = 0;
@@ -414,7 +405,9 @@ void MainWindow::perSecondUpdate() {
             }
         }
     }
-    if(selectCounter == PHASE_RUN && slider->value() != 2) {
+
+    // session run phase, device has connection - drain battery
+    if(phase == PHASE_RUN && slider->value() != NO_CONN) {
         updateTimeLabel();
         batteryLevel = batteryLevel - (0.1 * (record->getIntensity() + 0.5));
         batteryLevel = batteryLevel < 0? 0 : batteryLevel;
@@ -426,35 +419,33 @@ void MainWindow::perSecondUpdate() {
             sessionEnd();
         }
     }
-    else if(powerOn && selectCounter == PHASE_END){
-        qDebug() << "line 408";
-//        record->decrementIntensity();
-
+    // device is on and in end phase - perform soft off
+    else if(powerOn && phase == PHASE_END){
         progressBar->setValue(progressBar->value() - 1);
         updateTimeLabel();
         if(progressBar->value() == 1) {
-            selectCounter = PHASE_SELECT;
+            phase = PHASE_SELECT;
         }
     }
-    if(powerOn && selectCounter == PHASE_SELECT){
-        idleTime++;
-        if(idleTime == MAX_IDLE_TIME){
-            //idleTime=0;
-            togglePowerOn();
 
+    // device is on and in selection phase - count idle time
+    if(powerOn && phase == PHASE_SELECT){
+        idleTime++;
+        qDebug() << "idleTime:" << idleTime;
+        if(idleTime == MAX_IDLE_TIME){
+            togglePowerOn();
         }
     }
  }
+
 
 // called when sessionTimer runs out
 // can also be called when device powers off mid session
 void MainWindow::sessionEnd() {
     sessionTimer.stop();
-    qDebug() << "line 427";
     progressBar->setValue(progressBar->maximum());
     secondsTimer.start(1000);
-//    usleep(1000000);
-    selectCounter = PHASE_END;
+    phase = PHASE_END;
     idleTime=0;
     if(batteryLevel>criticalLevel) {
         ui->recordButton->setEnabled(true);

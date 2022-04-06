@@ -4,14 +4,13 @@ using namespace std;
 
 #include "Record.h"
 
-// ctor
+// This is the Record class - contains a Session pointer, intensity, duration
 Record::Record(int dur, int i, Session *s)
     : duration(dur),
       intensity(i),
       session(s)
 { }
 
-// dtor
 Record::~Record()
 {
     delete session;
@@ -46,8 +45,8 @@ QString Record::getRecordString() {
     if(session != NULL) {
         str = session->getSessionString();
     }
-    str = str + "Duration: " + QString::number(duration) + ",\n"
-            + "Intensity: " + QString::number(intensity) + "\n";
+    str = str + "Duration: " + QString::number(duration) + " min,\n"
+            + "Intensity: " + QString::number(intensity) + " V\n";
     return str;
 }
 
