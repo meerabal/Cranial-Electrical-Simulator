@@ -4,13 +4,12 @@ using namespace std;
 
 #include "Session.h"
 
-// ctor
+// This is session class - contains session name and frequency
 Session::Session(QString n, float f)
     : name(n),
       freq(f)
 { }
 
-// dtor
 Session::~Session()
 { }
 
@@ -24,7 +23,7 @@ float Session::getFreq() {
 
 QString Session::getSessionString() {
     QString str = "Session name: " + name + ",\n"
-            + "Frequency: " + QString::number(freq) + ",\n";
+            + "Frequency: " + QString::number(freq) + " Hz,\n";
     return str;
 }
 

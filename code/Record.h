@@ -10,11 +10,11 @@ using namespace std;
 class Record
 {
 public:
-    Record(int dur=0, int i=0, Session *s=NULL);   // default ctor
-    ~Record();                                         // dtor
+    Record(int dur=0, int i=0, Session *s=NULL);    // default ctor
+    ~Record();                                      // dtor
 
-    void incrementIntensity();
-    void decrementIntensity();
+    void incrementIntensity();                      // increments intensity by 1
+    void decrementIntensity();                      // decrements intensity by 1
 
     int getDuration();
     int getIntensity();
@@ -27,7 +27,7 @@ public:
 
 private:
     int duration;
-    int intensity;          // 0 to 7
+    int intensity;          // can have values 0 to 7
     Session *session;
 
 };

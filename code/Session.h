@@ -10,11 +10,11 @@ class Session
 {
 public:
     Session(QString n="None", float f=0.5);      // default ctor
-    ~Session();                                 // dtor
+    ~Session();                                  // dtor
 
     QString getName();
     float getFreq();
-    QString getSessionString();
+    QString getSessionString();                 // getter for a string containing session name and frequency details
 
     void setName(QString n);
     void setFreq(float f);
