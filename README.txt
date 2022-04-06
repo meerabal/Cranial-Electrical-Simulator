@@ -22,6 +22,8 @@ Roshan - Qt code implementation and execution, collaborating with the team on de
 
 
 
+To untar the submission folder, the user can type: tar -xvf team11.tar from the command line. 
+
 File Organization and Deliverables:
 
 **All of the source code, header files, the UI file, and the project file (comp3004_fp.pro) all reside inside the “code” folder at the root of the directory. 
