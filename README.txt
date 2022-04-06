@@ -18,7 +18,7 @@ Collaborating with the team on design decisions, Team management and coordinatin
 
 Meera - Qt code implementation and execution, collaborating with the team on design decisions, making weekly submissions to BrightSpace.
 
-Roshan - Qt code implementation and execution, collaborating with the team on design decisions.
+Roshan - Qt code implementation and execution, Developing the UI of OASIS Pro test simulation, Critical battery use case scenario, designing the soft off functionality of the device. Collaborating with the team on design decisions.
 
 
 
