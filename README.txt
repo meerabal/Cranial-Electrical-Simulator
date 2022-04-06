@@ -16,9 +16,9 @@ design decisions.
 Nazeeha - Use Cases - 4,5,7, Use Case Diagram, Textual Explanation for all use cases, UML Diagram, assisting Brian with the design documents he worked on, README, 
 Collaborating with the team on design decisions, Team management and coordinating the team workflow. 
 
-Meera - Qt code implementation and execution, collaborating with the team on design decisions, making weekly submissions to BrightSpace.
+Meera - Qt code implementation and execution: Implemented per-second updates, Intensity use case, Battery drain, Connection phase, Record session, Pause and resume session depending on connection status, Session End, Cleanup and commenting, code testing. Collaborating with the team on design decisions, making weekly submissions to BrightSpace.
 
-Roshan - Qt code implementation and execution, Developing the UI of OASIS Pro test simulation, Critical battery use case scenario, designing the soft off functionality of the device. Collaborating with the team on design decisions.
+Roshan - Qt code implementation and execution, Developing the UI of OASIS Pro test simulation, button/slider handlers, Power on, Session timer, Battery updates, Critical battery use case scenario, Progress bar updates, designing the soft off functionality of the device, code testing. Collaborating with the team on design decisions.
 
 
 
