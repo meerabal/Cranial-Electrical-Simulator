@@ -24,7 +24,7 @@ Roshan - Qt code implementation and execution, collaborating with the team on de
 
 File Organization and Deliverables:
 
-**All of the source code, header files, the UI file, and the project file all reside inside the “code” folder at the root of the directory. 
+**All of the source code, header files, the UI file, and the project file (comp3004_fp.pro) all reside inside the “code” folder at the root of the directory. 
 Inside the code folder, there are no subsequent directories to navigate through. 
 
 **The design documentation is organized into folders inside the “Design Documentation” folder, also at the root directory. 
