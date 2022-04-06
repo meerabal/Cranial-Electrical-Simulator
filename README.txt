@@ -29,8 +29,7 @@ Inside the code folder, there are no subsequent directories to navigate through.
 
 **The design documentation is organized into folders inside the “Design Documentation” folder, also at the root directory. 
 These sub-folders include the likes of: Use Cases, Sequence Diagrams, Traceability Matrix, UML Class Diagram, and the Textual Explanation. 
-The 3004 Project use cases, sequence diagrams (8 separate files), Traceability Matrix, UML Class Diagram, and Textual Explanation can be found 
-in these folders respectively in the form of pdf files. 
+The 3004 Project use cases, sequence diagrams (8 separate files), Traceability Matrix, UML Class Diagram, and Textual Explanation can be found in these folders respectively in the form of pdf files. 
 
 The files to be delivered include any relevant source code, header files, UI files, or project files (.pro file) to execute the QT device application. 
 All of the source code integrates QT elements rather than use data structures from any C++ libraries. The code simulates all of the features specified in the Team Project 
